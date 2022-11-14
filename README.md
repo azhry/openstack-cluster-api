@@ -1,7 +1,7 @@
 # Command List
 
 ```bash
-clusterctl init --infrastructure oci
+clusterctl init --infrastructure openstack
 ```
 
 ```bash
