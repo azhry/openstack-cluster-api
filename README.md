@@ -50,6 +50,54 @@ kubectl --kubeconfig=./${CLUSTER_NAME}.kubeconfig apply -f https://raw.githubuse
 kubectl --kubeconfig=./${CLUSTER_NAME}.kubeconfig apply -f https://raw.githubusercontent.com/kubernetes/cloud-provider-openstack/master/manifests/controller-manager/openstack-cloud-controller-manager-ds.yaml
 ```
 
+An example of manifest for provisioning a block storage and attached it to a pod. If a bad request occured that says 'invalid availability zone', you can change the `parameters.availability` value. If not set, the default availability from instance will be used
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: csi-sc-cinderplugin
+provisioner: cinder.csi.openstack.org
+parameters:
+  availability: nova      # <----- change the value here
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: csi-pvc-cinderplugin
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Block
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: csi-sc-cinderplugin
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-block
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: IfNotPresent
+    name: nginx
+    ports:
+    - containerPort: 80
+      protocol: TCP
+    volumeDevices:
+      - devicePath: /dev/xvda
+        name: csi-data-cinderplugin
+  volumes:
+  - name: csi-data-cinderplugin
+    persistentVolumeClaim:
+      claimName: csi-pvc-cinderplugin
+      readOnly: false
+```
+
 -----------------------------------------------------------
 
 ```bash
