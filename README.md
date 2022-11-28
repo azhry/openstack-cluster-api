@@ -99,16 +99,27 @@ The description of these configuration variables are as follows
 | OPENSTACK_DNS_NAMESERVERS | Public DNS server | `8.8.8.8` |
 | OPENSTACK_FAILURE_DOMAIN | Availability zone name that you can get by executing `openstack availability zone list` | `az-01` |
 
+Then, export the variables using the source command
+```bash
+source /tmp/env.rc <path/to/clouds.yaml> openstack
+```
+
 ## Cluster API
 
+### Install clusterctl CLI
+```bash
+curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.2.6/clusterctl-linux-amd64 -o clusterctl
+chmod +x ./clusterctl
+sudo mv ./clusterctl /usr/local/bin/clusterctl
+clusterctl version
+```
+
+### Install Management Cluster
+Initialize the OpenStack infrastructure using this command
 ```bash
 clusterctl init --infrastructure openstack
 ```
-
-```bash
-clusterctl delete --infrastructure openstack
-```
-
+Then, generate the cluster yaml configuration using this command
 ```bash
 clusterctl generate cluster <CLUSTER_NAME> \
   --flavor external-cloud-provider 
@@ -117,21 +128,39 @@ clusterctl generate cluster <CLUSTER_NAME> \
   --control-plane-machine-count=1 \   
   --worker-machine-count=3 > <CLUSTER_NAME>.yaml
 ```
-
+For example, if the `CLUSTER_NAME` is `capi-quickstart`, then it will generate yaml configuration file `capi-quickstart.yaml`. Note that the `kubernetes-version` <b>must be the same as the Kubernetes version on your custom image</b>. Apply the configuration to provision the workload cluster.
 ```bash
 kubectl apply -f <CLUSTER_NAME>.yaml
 ```
 
+To get the cluster config, use this command.
 ```bash
 clusterctl get kubeconfig <CLUSTER_NAME> > <KUBECONFIG_FILENAME>
 ```
+
+If you want to delete the infrastructure, use this command.
+```bash
+clusterctl delete --infrastructure openstack
+```
+
+You can see the information about your workload cluster by running 
+```bash
+clusterctl describe cluster <CLUSTER_NAME>
+```
+
+See the workload cluster pods status by running
+```bash
+kubectl get pods -A --kubeconfig=<KUBECONFIG_FILENAME>
+```
+
+You can see that the `coredns-` pods status is not ready, because we need to apply the CNI solution first.
 
 ## Deploy CNI Flannel
 
 Before applying CNI Flannel, you must change your cluster network `cidrBlocks` to `10.244.0.0/16` and set `allowAllInClusterTraffic` to `true` on your OpenStackCluster kind
 
 ```bash
-kubectl --kubeconfig=./${CLUSTER_NAME}.kubeconfig apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+kubectl --kubeconfig=./${KUBECONFIG_FILENAME} apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
 ```
 
 Download `create_cloud_conf.sh` from [https://raw.githubusercontent.com/kubernetes-sigs/cluster-api-provider-openstack/main/templates/create_cloud_conf.sh](https://raw.githubusercontent.com/kubernetes-sigs/cluster-api-provider-openstack/main/templates/create_cloud_conf.sh)
@@ -144,9 +173,9 @@ kubectl --kubeconfig=./${CLUSTER_NAME}.kubeconfig create secret -n kube-system g
 ```
 
 ```bash
-kubectl --kubeconfig=./${CLUSTER_NAME}.kubeconfig apply -f https://raw.githubusercontent.com/kubernetes/cloud-provider-openstack/master/manifests/controller-manager/cloud-controller-manager-roles.yaml
-kubectl --kubeconfig=./${CLUSTER_NAME}.kubeconfig apply -f https://raw.githubusercontent.com/kubernetes/cloud-provider-openstack/master/manifests/controller-manager/cloud-controller-manager-role-bindings.yaml
-kubectl --kubeconfig=./${CLUSTER_NAME}.kubeconfig apply -f https://raw.githubusercontent.com/kubernetes/cloud-provider-openstack/master/manifests/controller-manager/openstack-cloud-controller-manager-ds.yaml
+kubectl --kubeconfig=./${KUBECONFIG_FILENAME} apply -f https://raw.githubusercontent.com/kubernetes/cloud-provider-openstack/master/manifests/controller-manager/cloud-controller-manager-roles.yaml
+kubectl --kubeconfig=./${KUBECONFIG_FILENAME} apply -f https://raw.githubusercontent.com/kubernetes/cloud-provider-openstack/master/manifests/controller-manager/cloud-controller-manager-role-bindings.yaml
+kubectl --kubeconfig=./${KUBECONFIG_FILENAME} apply -f https://raw.githubusercontent.com/kubernetes/cloud-provider-openstack/master/manifests/controller-manager/openstack-cloud-controller-manager-ds.yaml
 ```
 
 ## Install CSI Cinder driver for Volume Provisioning
@@ -160,11 +189,11 @@ base64 -w 0 cloud.conf
 Change the `cloud.conf` value in `csi-secret-cinderplugin.yaml` to your base64 result
 
 ```bash
-kubectl create -f manifests/cinder-csi-plugin/csi-secret-cinderplugin.yaml
+kubectl create -f manifests/cinder-csi-plugin/csi-secret-cinderplugin.yaml --kubeconfig=./${KUBECONFIG_FILENAME}
 ```
 
 ```bash
-kubectl -f apply manifests/cinder-csi-plugin/
+kubectl create -f manifests/cinder-csi-plugin/ --kubeconfig=./${KUBECONFIG_FILENAME}
 ```
 
 An example of manifest for provisioning a block storage and attached it to a pod. If a bad request occured that says 'invalid availability zone', you can change the `parameters.availability` value. If not set, the default availability from instance will be used
@@ -217,14 +246,38 @@ spec:
 
 -----------------------------------------------------------
 
+
+## Another useful commands
+
+To see current cluster info. 
 ```bash
 kubectl cluster-info --kubeconfig=<KUBECONFIG_FILENAME>
 ```
+The `--kubeconfig` flag is used to choose what kubeconfig file is used for running the kubectl command. You can also set the `KUBECONFIG` variable globally using 
+```bash
+export KUBECONFIG=<PATH_TO_KUBECONFIG_FILE>
+```
 
+To see the pod's logs
 ```bash
 kubectl logs -f <POD_NAME> -n <NAMESPACE>
 ```
 
+To see the cluster description, events, and status
 ```bash
 kubectl describe cluster <CLUSTER_NAME>
 ```
+
+To delete the applied configuration
+```bash
+kubectl delete -f <configuration>.yaml
+```
+
+### Author
+&copy; Azhary Arliansyah
+
+### Source
+- [https://image-builder.sigs.k8s.io/capi/providers/openstack.html](https://image-builder.sigs.k8s.io/capi/providers/openstack.html)
+- [https://cluster-api.sigs.k8s.io/user/quick-start.html](https://cluster-api.sigs.k8s.io/user/quick-start.html)
+- [https://github.com/flannel-io/flannel/blob/master/README.md](https://github.com/flannel-io/flannel/blob/master/README.md)
+- [https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/cinder-csi-plugin/using-cinder-csi-plugin.md](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/cinder-csi-plugin/using-cinder-csi-plugin.md)
