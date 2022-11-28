@@ -49,6 +49,8 @@ If you want to build the image with another version of Kubernetes, try changing 
 
 You can see the list of commands to build another image version on `images/capi/Makefile` indicated with prefix `build-`
 
+## Setting Up OpenStack CLI
+
 ## Setting Up Environment Variables
 Download the `clouds.yaml` from your OpenStack cloud provider and set `clouds.openstack.verify` to `false` and `clouds.openstack.region_name` to the region where your cluster management will be provisioned. 
 Then, download the `env.rc` to set up the required variables
@@ -56,7 +58,7 @@ Then, download the `env.rc` to set up the required variables
 wget https://raw.githubusercontent.com/kubernetes-sigs/cluster-api-provider-openstack/master/templates/env.rc -O /tmp/env.rc
 ```
 
-Edit `env.rc` file and add the remaining required variables at the bottom
+Edit `env.rc` file and add the remaining required variables at the bottom (these values below are just for documentation purpose, not real value)
 ```.env
 export OPENSTACK_CONTROL_PLANE_MACHINE_FLAVOR="SS2.2"
 export OPENSTACK_NODE_MACHINE_FLAVOR="SM8.4"
@@ -66,6 +68,18 @@ export OPENSTACK_SSH_KEY_NAME="kube-key"
 export OPENSTACK_DNS_NAMESERVERS="8.8.8.8"
 export OPENSTACK_FAILURE_DOMAIN="az-01"
 ```
+
+The description of these configuration variables are as follows
+
+| Variable      | Description | Example Value |
+| ----------- | ----------- | ----------- |
+| OPENSTACK_CONTROL_PLANE_MACHINE_FLAVOR | Machine flavor name that you can get by executing `openstack flavor list` | `SS2.2` |
+| OPENSTACK_NODE_MACHINE_FLAVOR | Machine flavor name that you can get by executing `openstack flavor list` | `SM8.4` |
+| OPENSTACK_EXTERNAL_NETWORK_ID | External network ID that you can get by executing `openstack network list` | `79241ddc-c51b-4677-a763-f48c60870923` |
+| OPENSTACK_IMAGE_NAME | Image name that you can get by executing `openstack image list` | `Ubuntu 22.04 LTS` |
+| OPENSTACK_SSH_KEY_NAME | Keypair name that you can get by executing `openstack keypair list` | `kube-key` |
+| OPENSTACK_DNS_NAMESERVERS | Public DNS server | `8.8.8.8` |
+| OPENSTACK_FAILURE_DOMAIN | Availability zone name that you can get by executing `openstack availability zone list` | `az-01` |
 
 ## Cluster API
 
