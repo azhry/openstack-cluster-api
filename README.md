@@ -274,7 +274,7 @@ kubectl delete -f <configuration>.yaml
 ```
 
 ### Author
-&copy; Azhary Arliansyah
+💻 Azhary Arliansyah
 
 ### Source
 - [https://image-builder.sigs.k8s.io/capi/providers/openstack.html](https://image-builder.sigs.k8s.io/capi/providers/openstack.html)
