@@ -50,6 +50,24 @@ If you want to build the image with another version of Kubernetes, try changing 
 You can see the list of commands to build another image version on `images/capi/Makefile` indicated with prefix `build-`
 
 ## Setting Up OpenStack CLI
+### Install the OpenStack CLI
+Currently the CLI only supported with Python 2.7.x. Install the CLI with `pip`
+```bash
+pip install python-openstackclient
+```
+
+### Setting Up CLI Authentication
+Download the OpenStack RC File from your cloud provider and export the variables with source command
+```bash
+source openstack.rc
+```
+
+Test if the authentication is correct by executing
+```bash
+openstack network list
+```
+
+Now, your OpenStack CLI is ready to use!
 
 ## Setting Up Environment Variables
 Download the `clouds.yaml` from your OpenStack cloud provider and set `clouds.openstack.verify` to `false` and `clouds.openstack.region_name` to the region where your cluster management will be provisioned. 
